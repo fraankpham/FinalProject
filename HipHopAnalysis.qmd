@@ -1,0 +1,161 @@
+---
+title: "Formal Analysis of the Hip Hop Dataset"
+author: "Frank Pham"
+format: 
+  html: 
+    code-fold: true
+    self-contained: true
+    code-tools: true
+    toc: true
+editor: source
+execute: 
+  echo: true
+  warning: false
+  message: false
+output:
+  quarto::quarto_html_document:
+    theme: bslib::bs_theme(version = 5, bootswatch = "flatly")  
+---
+![Project C](/Users/frankpham/Documents/Stat331/Final Project/Screenshot 2023-12-14 at 1.19.40 PM.jpg)
+
+## BSLIB Adjustments
+```{css}
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #343a40; 
+  color: #ffffff; 
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #ffffff;  
+}
+
+.container {
+  background-color: #212529; 
+  padding: 20px;
+}
+
+/* Change the appearance of code blocks */
+pre, code {
+  background-color: #f1f1f1;  
+  color: #004080;  
+}
+
+a {
+  color: #007bff;  
+}
+
+.quarto-author {
+  font-size: 1.2em; 
+}
+
+#quarto-toc {
+  font-size: 3em; 
+}
+
+```
+
+## Introduction
+
+This data set `hiphop` contains data from a study conducted by a linguist at the University of Minnesota. The focus of this study was predicting musical taste based on `familiarity` with African American English (AAE). The study included 168 subjects particpated in this study, each asked to define 64 different AAE terms. Given those definitions, it was used to create a familiarity score for each subject for each term. The score is scored on a scale of 1-5 (1 = not at all, 5 = very well) quantifying, how well the subject knows the term. 
+
+## Load Data
+
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(tidyverse)
+library(here)
+library(readr)
+library(ggplot2)  # Add any other necessary libraries
+library(bslib)
+
+# Load the hiphop.csv dataset
+hiphop_data <- readr::read_csv("hiphop.csv")
+```
+
+
+## Summary Statistics
+```{r}
+# clean the data and summarize it
+
+hiphop_clean <- hiphop_data |>
+  mutate(sex = as.factor(sex),
+         word = as.factor(word),
+         ethnic = as.factor(ethnic),
+         subj = as.factor(subj),
+         across(.cols = jayz:bieber, .fns = as.factor))
+summary(hiphop_clean)
+```
+The dataset has 10,752 rows and 38 columns. There are four qualitative variables (word, subject, sex, and ethnic) and the rest are quantitative. None of them appear to have missing values except for the numPreferredArtists and numOverallArtists variables.
+
+
+## Data Visualization
+
+
+```{r}
+hiphop_clean1 <- hiphop_clean |>
+  distinct(subj, .keep_all = TRUE)|>
+  select(sex:ethnic) 
+  
+hiphop_age <- hiphop_clean1 |>
+  count(age) 
+
+hiphop_ethnic <- hiphop_clean1 |>
+  count(ethnic) 
+
+hiphop_sex <- hiphop_clean1 |>
+  count(sex) 
+ggplot(data = hiphop_clean1, mapping = aes(x = age)) +
+  geom_histogram(binwidth = 3, color = "black", fill = "blue") +
+  labs(x = "Age",
+       y = "Frequency",
+       title = "Participants by age")
+```
+
+In this dataset, we notice that there is a clear right skewed distribution of participants by age. There seems to be a particular spike right before the age of 20. Becasue the bid width is 3, it safe to suggest that each bar in the graph is represented by the range of three years.
+
+
+```{r}
+# Calculate the average familiarity for each word
+average_familiarity <- hiphop_data %>%
+  group_by(word) %>%
+  summarize(avg_familiarity = mean(familiarity))
+
+# Create a bar plot
+ggplot(average_familiarity, aes(x = word, y = avg_familiarity)) +
+  geom_bar(stat = "identity", fill = "skyblue", width = 0.8, position = position_dodge(width = 10)) +
+  labs(title = "Average Familiarity of Words",
+       x = "Words",
+       y = "Average Familiarity") +
+  theme(axis.text.x = element_text(angle = 75, hjust = 1))
+```
+
+This bar plot depict the average familiarity scores displays a diverse range of familiarity scores. This would highlight differences in the participants knowledge of specific words. Words with a higher bar meant that the average familiarity was higher. Some phrases that were particularly high was "feel me" and "off the hook". 
+
+
+## Statistical Analysis
+```{r}
+hiphop_clean <- na.omit(hiphop_data)
+t_test_result <- t.test(hiphop_clean$familiarity, mu = 0)
+t_test_result
+```
+Becasue the p value is below 0.05, we have sufficent evidence that the mean familiarity score is unlikely to have happened by chance. The low p-value also gives us sufficient evidence to reject the null hypothesis. The positive sample mean however suggests that the participants in the given study had a positive familiarity with the vocabulary terms that they were tested on.
+
+
+## Regression Analysis
+
+```{r}
+
+model <- lm(familiarity ~ age + ethnic + sex + hiphop + bieber, data = hiphop_data)
+
+# View model summary
+summary(model)
+
+```
+A few key issues to notice here is that we notice that the expected mean familiarity is 1.859 when `age`, `hiphop`, and `bieber` and other variables were all 0. We also see that there are certain significant predictors of familiarity which included `ethnicasian`, `ethnicblack`, `ethnichispanic`, `ethnicindian`, `ethnicwhite`, `sexMale`, and `hiphop`.
+
+
+## Conclusion 
+
+After this statistical analysis, I have uncovered that the linear regression model is statistically significant which means that at least one predictor variable is significant when predicing the familiarity with hip hop. While we see the significant predictors in the `Regression Analysis`, it is shown that `age` and `bieber` are not significant since their p-value is greater than 0.05. Also shown in the results of this analysis is that the variable`hiphop` has a strong association with hip hop music which is connected to higher familiarity scores. In conlusion, the results of this study reveals the significant associations between ethnicity, music preferences and the familiarity with hip-hop vocabulary.
